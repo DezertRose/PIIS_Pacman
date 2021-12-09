@@ -1,5 +1,6 @@
 import random
 import pygame
+from heapq import *
 from settings import *
 
 vec = pygame.math.Vector2
@@ -70,7 +71,7 @@ class Enemy:
 
     def move(self):
         if self.personality == "random":
-            self.direction = self.get_random_direction()
+            self.direction = self.get_path_direction_a()
 
         if self.personality == "second":
             self.direction = self.get_path_direction()
@@ -81,39 +82,10 @@ class Enemy:
         if self.personality == "last_one":
             self.direction = self.get_path_direction()
 
-    '''def set_target(self):
-        if self.personality == "speedy" or self.personality == "slow":
-            return self.app.player.grid_pos
-        else:
-            if self.app.player.grid_pos[0] > MAX_X//2 and self.app.player.grid_pos[1] > MAX_Y//2:
-                return vec(1, 1)
-            if self.app.player.grid_pos[0] > MAX_X//2 and self.app.player.grid_pos[1] < MAX_Y//2:
-                return vec(1, MAX_Y - 2)
-            if self.app.player.grid_pos[0] < MAX_X//2 and self.app.player.grid_pos[1] > MAX_Y//2:
-                return vec(MAX_X-2, 1)
-            else:
-                return vec(MAX_X-2, MAX_Y-2)'''
-
     def get_path_direction(self):
         next_cell = self.find_cell_path()
         x_dir = next_cell[0]-self.grid_pos[0]
         y_dir = next_cell[1]-self.grid_pos[1]
-        return vec(x_dir, y_dir)
-
-    def get_random_direction(self):
-        while True:
-            number = random.randint(-4, 4)
-            if number < -2:
-                x_dir, y_dir = 1, 0
-            elif number > -3 and number < 0:
-                x_dir, y_dir = 0, 1
-            elif number > -1 and number < 2:
-                x_dir, y_dir = -1, 0
-            else:
-                x_dir, y_dir = 0, -1
-            next_pos = vec(self.grid_pos.x + x_dir, self.grid_pos.y + y_dir)
-            if next_pos not in self.app.walls:
-                break
         return vec(x_dir, y_dir)
 
     def find_cell_path(self):
@@ -153,3 +125,61 @@ class Enemy:
                     target = step["Current"]
                     shortest.insert(0, step["Current"])
         return shortest[1]
+
+    def get_next_nodes(self, x, y):
+        check_next_node = lambda x, y: True if 0 <= x < MAX_X and 0 <= y < MAX_Y and vec(x,
+                                                                                         y) not in self.app.walls else False
+        ways = [-1, 0], [0, -1], [1, 0], [0, 1]
+        return [(1, (x + dx, y + dy)) for dx, dy in ways if check_next_node(x + dx, y + dy)]
+
+    def heuristic(self, a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def A_star(self, start, target):
+        # dict of adjacency lists
+        graph = {}
+        for y in range(MAX_Y):
+            for x in range(MAX_X):
+                graph[(x, y)] = graph.get((x, y), []) + self.get_next_nodes(x, y)
+        # BFS settings
+        queue = []
+        heappush(queue, (0, start))
+        cost_visited = {start: 0}
+        visited = {start: None}
+        path = []
+        print(1)
+        while True:
+            # Dijkstra logic
+            if queue:
+                cur_cost, cur_node = heappop(queue)
+                # print(cur_node, "end")
+                if cur_node == target:
+                    path.append(cur_node)
+                    print(path)
+                    return path
+
+                next_nodes = graph[cur_node]
+                for next_node in next_nodes:
+                    neigh_cost, neigh_node = next_node
+                    new_cost = cost_visited[cur_node] + neigh_cost
+
+                    if neigh_node not in cost_visited or new_cost < cost_visited[neigh_node]:
+                        priority = new_cost + self.heuristic(neigh_node, target)
+                        heappush(queue, (priority, neigh_node))
+                        cost_visited[neigh_node] = new_cost
+                        visited[neigh_node] = cur_node
+
+                path.append(cur_node)
+
+    def find_cell_path_a(self):
+        start_pos = (int(self.grid_pos.x), int(self.grid_pos.y))
+        target_pos = (int(self.app.player.grid_pos.x), int(self.app.player.grid_pos.y))
+        path = self.A_star(start_pos, target_pos)
+        print(path)
+        return path[1]
+
+    def get_path_direction_a(self):
+        next_cell = self.find_cell_path_a()
+        x_dir = next_cell[0] - self.grid_pos[0]
+        y_dir = next_cell[1] - self.grid_pos[1]
+        return vec(x_dir, y_dir)

@@ -53,21 +53,6 @@ class App:
              pos[1] = pos[1] - text_size[1]//2
          screen.blit(text, pos)
 
-     def random_field(self):
-        for y in range(MAX_Y):
-            for x in range(MAX_X):
-                if x == 0 or y == 0:
-                    self.walls.append(1)
-                elif x  > int(MAX_X//2 + 3) and x < int(MAX_X//2-3):
-                    if y == int(MAX_Y//2 - 3) or y == int(MAX_Y//2+ 3):
-                        self.walls.append(1)
-                    elif x == int(MAX_X//2 + 3) or x == int(MAX_X//2-3):
-                        self.walls.append(1)
-                    else:
-                        self.walls.append(0)
-                else:
-                    self.walls.append(0)
-
      def load(self):
         self.baground = pygame.image.load('FIELD.png')
         self.baground = pygame.transform.scale(self.baground, (FIELD_WIDTH, FIELD_HEIGHT))
@@ -111,9 +96,6 @@ class App:
 
         for wall in self.walls:
             pygame.draw.rect(self.baground, BLUE, (wall.x*self.cell_width, wall.y*self.cell_height, self.cell_width, self.cell_height))
-
-       # for coin in self.coints:
-         #   pygame.draw.rect(self.baground, ORANGE, ( coin.x * self.cell_width, coin.y * self.cell_height, self.cell_width, self.cell_height), 1)
 
      def playing_events(self):
          for event in pygame.event.get():

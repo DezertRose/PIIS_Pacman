@@ -1,6 +1,9 @@
+import random
+
 import pygame
 from settings import *
 from heapq import *
+from random import randint
 vec = pygame.math.Vector2
 
 class Player:
@@ -9,7 +12,6 @@ class Player:
         self.grid_pos = pos
         self.starting_pos = [pos.x, pos.y]
         self.direction = vec(1, 0)
-       # self.direction = vec(0, 0)
         self.stored_direction = None
         self.able_to_move = True
         self.current_score = 0
@@ -21,30 +23,30 @@ class Player:
         self.pix_pos = vec(for_X, for_Y )
 
     def update(self):
-        if self.able_to_move:
-            self.pix_pos += self.direction * self.speed
+        self.pix_pos += self.direction
+
         if self.time_to_move():
-            if self.stored_direction != None:
-                self.direction = self.stored_direction
-            self.able_to_move = self.can_move()
-            # Setting grid position in reference to pix pos
-        self.grid_pos[0] = (self.pix_pos[0] - TOP_BOTTOM_BUFFER +
-                            self.app.cell_width // 2) // self.app.cell_width + 1
-        self.grid_pos[1] = (self.pix_pos[1] - TOP_BOTTOM_BUFFER +
-                            self.app.cell_height // 2) // self.app.cell_height + 1
+            self.direction =  self.get_path_direction()
+
+        self.grid_pos[0] = self.temp_position(0, self.app.cell_width)
+        self.grid_pos[1] = self.temp_position(1, self.app.cell_height)
+
         if self.on_coin():
             self.eat_coin()
 
-    def temp_position(self, temp_numb, temp_X):
-        return (self.pix_pos[temp_numb] - TOP_BOTTOM_BUFFER + temp_X//2)//temp_X+1
-
     def time_to_move(self):
-        if int(self.pix_pos.x+TOP_BOTTOM_BUFFER//2) % self.app.cell_width == 0:
+        if int(self.pix_pos.x + TOP_BOTTOM_BUFFER // 2) % self.app.cell_width == 0:
             if self.direction == vec(1, 0) or self.direction == vec(-1, 0) or self.direction == vec(0, 0):
                 return True
-        if int(self.pix_pos.y+TOP_BOTTOM_BUFFER//2) % self.app.cell_height == 0:
-            if self.direction == vec(0, 1) or self.direction == vec(0, -1) or self.direction == vec(0, 0):
+
+        if int(self.pix_pos.y + TOP_BOTTOM_BUFFER // 2) % self.app.cell_height == 0 or self.direction == vec(0, 0):
+            if self.direction == vec(0, 1) or self.direction == vec(0, -1):
                 return True
+
+        return False
+    def temp_position(self, temp_numb, temp_X):
+        return (self.pix_pos[temp_numb] - TOP_BOTTOM_BUFFER + temp_X // 2) // temp_X + 1
+
 
     def get_pix_pos(self):
         return vec((self.grid_pos.x * self.app.cell_width) + TOP_BOTTOM_BUFFER // 2 + self.app.cell_width // 2,
@@ -62,8 +64,8 @@ class Player:
                 return False
         return True
 
-    def move(self, direction):
-        self.stored_direction = direction
+   # def move(self, direction):
+    #    self.stored_direction = direction
 
     def on_coin(self):
         if self.grid_pos in self.app.coints:
@@ -83,44 +85,44 @@ class Player:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     def A_star(self, start, target):
-        # dict of adjacency lists
+
         graph = {}
         for y in range(MAX_Y):
             for x in range(MAX_X):
                 graph[(x, y)] = graph.get((x, y), []) + self.get_next_nodes(x, y)
-        # BFS settings
+
         queue = []
         heappush(queue, (0, start))
         cost_visited = {start: 0}
         visited = {start: None}
         path = []
-        print(1)
         while True:
-            # Dijkstra logic
             if queue:
-                cur_cost, cur_node = heappop(queue)
-                # print(cur_node, "end")
-                if cur_node == target:
-                    path.append(cur_node)
-                    print(path)
+                current_cost, current_node = heappop(queue)
+                if current_node == target:
+                    path.append(current_node)
                     return path
 
-                next_nodes = graph[cur_node]
+                next_nodes = graph[current_node]
                 for next_node in next_nodes:
                     neigh_cost, neigh_node = next_node
-                    new_cost = cost_visited[cur_node] + neigh_cost
+                    new_cost = cost_visited[current_node] + neigh_cost
 
                     if neigh_node not in cost_visited or new_cost < cost_visited[neigh_node]:
                         priority = new_cost + self.heuristic(neigh_node, target)
                         heappush(queue, (priority, neigh_node))
                         cost_visited[neigh_node] = new_cost
-                        visited[neigh_node] = cur_node
+                        visited[neigh_node] = current_node
 
-                path.append(cur_node)
+                path.append(current_node)
+
 
     def find_cell_path(self):
         start = (int(self.grid_pos.x), int(self.grid_pos.y))
-        target = (13, 7)
+        temp_goal = random.choice(self.app.coints)
+        #print(self.app.coints, "c")
+        #print(temp_goal, "1")
+        target = (int(temp_goal[0]), int(temp_goal[1]))
         path = self.A_star(start, target)
         print(path)
         return path[1]
